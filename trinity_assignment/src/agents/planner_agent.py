@@ -31,7 +31,7 @@ class PlannerPlan(BaseModel):
         description="The metadata keys (Header_2, Header_3, Header_4) mapped to each optimized query."
     )
     metadata_filter: List[str] = Field(
-        description="The specific values within the target sections to filter the vector search."
+        description="The specific values within the target sections to filter the vector search. only use lowercase "
     )
     reasoning: str = Field(
         description="The architectural justification for the selected retrieval strategy."
@@ -126,7 +126,7 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
 
     3) **target_sections**: For each sub-query in `optimized_queries`, identify the relevant header section from the document hierarchy. Return the corresponding `Header_2`, `Header_3`, or `Header_4` sections for each sub-query. For example, for `['What is Amazon Kendra?', 'What is Pinecone?']`, return `['Header_4', 'Header_4']`. length of target_sections = length of optimized_queries
 
-    4) **metadata_filter**: For each sub-query in `optimized_queries` and its corresponding target section in `target_sections`, return the exact metadata values associated with that section. For instance, for the sub-query `['What is Amazon Kendra?', 'What is Pinecone?']` and target sections `['Header_4', 'Header_4']`, return `['Amazon Kendra', 'Pinecone']` based on the document metadata. length of metadata_filters = length of target_sections
+    4) **metadata_filter**: For each sub-query in `optimized_queries` and its corresponding target section in `target_sections`, return the exact metadata values associated with that section. For instance, for the sub-query `['What is Amazon Kendra?', 'What is Pinecone?']` and target sections `['Header_4', 'Header_4']`, return `['amazon kendra', 'pinecone']` based on the document metadata. length of metadata_filters = length of target_sections .only use lowercase.
 
     5) **is_multi_pass**: If there is more than one sub-query in `optimized_queries`, set `is_multi_pass` to `True`. Otherwise, set it to `False`.
 
@@ -140,7 +140,7 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
         - `query_type`: "comparison"
         - `optimized_queries`: ["What is Amazon Kendra?", "What is Pinecone?"]
         - `target_sections`: ["Header_4", "Header_4"]
-        - `metadata_filter`: ["Amazon Kendra", "Pinecone"]
+        - `metadata_filter`: ["amazon kendra", "pinecone"]
         - `is_multi_pass`: True
         - `reasoning`: "The query asks for a comparison between Amazon Kendra and Pinecone, so it was classified as a 'comparison' query. Each query was broken down into specific topics, and both topics belong to 'Header_4', which refers to technical information about these tools. As there are two sub-queries, `is_multi_pass` is set to True."
 
@@ -151,7 +151,7 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
         - `query_type`: "definition"
         - `optimized_queries`: ["What is Amazon Kendra?"]
         - `target_sections`: ["Header_4"]
-        - `metadata_filter`: ["Amazon Kendra"]
+        - `metadata_filter`: ["amazon kendra"]
         - `is_multi_pass`: False
         - `reasoning`: "The query asks for a definition of Amazon Kendra, so it was classified as a 'definition' query. The query is straightforward and only requires one search term, which corresponds to 'Header_4' where Amazon Kendra is discussed. Since only one sub-query exists, `is_multi_pass` is set to False."
 
