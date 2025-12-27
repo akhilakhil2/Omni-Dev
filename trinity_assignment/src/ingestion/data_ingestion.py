@@ -10,8 +10,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
 
-
-
 os.environ['ANONYMIZED_TELEMETRY'] = 'False'
 # Configure basic logging to output to the console
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -64,7 +62,7 @@ def load_and_chunk_pdf(pdf_file: str) -> List[Document]:
             for key, value in split.metadata.items():
                 if key.startswith("Header_") and isinstance(value, str):
                 # Remove asterisks and clean up whitespace
-                    split.metadata[key] = value.replace("**", "").strip()
+                    split.metadata[key] = value.replace("**", "").strip().lower()
             semantic_docs.append(split)
     
     logger.info(f"Identified {len(semantic_docs)} structural sections (Headers).")

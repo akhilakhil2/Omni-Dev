@@ -1,11 +1,3 @@
-"""
-Retriever Agent Node for the RAG Workflow.
-
-This module handles the connection to ChromaDB, executes similarity searches based 
-on the Planner's strategy, and performs post-processing cleaning of metadata 
-to ensure the Synthesizer receives high-quality context.
-"""
-
 import logging
 from pathlib import Path
 from typing import Dict, Any, List
@@ -13,35 +5,47 @@ from typing import Dict, Any, List
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 from .state import AgentState
-# --- LOGGING CONFIGURATION ---
+
+# Initialize logger for tracking database operations and fallback triggers
 logger = logging.getLogger("RetrieverAgent")
 
 def retriever_node(state: AgentState) -> Dict[str, Any]:
     """
-    Connects to ChromaDB and retrieves relevant document chunks.
+    Graph Node: Executes the retrieval strategy defined by the Planner.
     
-    Includes a metadata cleaning step and a fallback search mechanism if 
-    the applied filters yield no results.
+    This node connects to the persistent ChromaDB vector store, iterates through 
+    the Planner's optimized queries, and performs metadata-filtered searches. 
+    If a filtered search yields no results, it automatically triggers an 
+    unfiltered fallback to ensure maximum recall.
+
+    Args:
+        state (AgentState): The current global state, containing the plan and queries.
+
+    Returns:
+        Dict[str, Any]: Updated state keys including documents, combined text content, 
+                        and a success flag.
     """
+    
     logger.info("Retriever Agent activated. Accessing Vector Database...")
 
-    # 1. Configuration & Path Setup
+    # Step 1: Extract strategy components from the AgentState
     plan = state.get("plan", {})
     queries = state.get("optimized_queries", [])
-    filters = plan.get("metadata_filter")
+    filters = plan.get("metadata_filter", [])
+    sections = plan.get("target_sections", [])
 
-    if filters and len(filters) > 1 and "$and" not in filters and "$or" not in filters:
-        filters = {"$and": [{k: v} for k, v in filters.items()]}
-
+    # Step 2: Dynamic Path Resolution for the Vector Store
+    # We resolve the path relative to this file to ensure portability across environments.
     vectorstore_foldername = "vectorstore"
     current_dir = Path(__file__).parent
-    # Resolving path to the persisted Chroma DB
-    vector_db_path = current_dir.parent.parent / vectorstore_foldername /  "chroma_db"
+    vector_db_path = current_dir.parent.parent / vectorstore_foldername / "chroma_db"
     persist_dir = str(vector_db_path.resolve())
 
-    # 2. Initialize Embeddings and VectorStore
+    # Step 3: Initialize the Embedding Model
+    # Must match the model used during data ingestion to maintain vector space consistency.
     embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     
+    # Step 4: Load the Chroma Vector Database
     vectordb = Chroma(
         persist_directory=persist_dir,
         embedding_function=embedding_model
@@ -49,42 +53,35 @@ def retriever_node(state: AgentState) -> Dict[str, Any]:
 
     all_retrieved_docs = []
 
-    # 3. Execution of Similarity Search
-    for q in queries:
-        logger.info(f"Searching for: '{q}' | Filter: {filters}")
+    # Step 5: Multi-Pass Retrieval Loop
+    # We iterate through each optimized query to gather context for different sub-topics.
+    for i in range(len(queries)):
+        print(f'Query: {queries[i]}, Section: {sections[i]}, Filter: {filters[i]}')
         
-        # Primary search with metadata filters
+        # Primary Search: Targeted search using metadata constraints (e.g., Header_4)
         docs = vectordb.similarity_search(
-            query=q,
+            query=queries[i],
             k=3,
-            filter=filters
+            filter={sections[i]: filters[i]}
         )
         
-        # FALLBACK: If filters are too restrictive, try search without them
-        if not docs and filters:
-            logger.warning(f"No results for '{q}' with filter. Attempting unfiltered fallback...")
-            docs = vectordb.similarity_search(query=q, k=3)
+        # Secondary Search (Heuristic Fallback): 
+        # Triggered only if the primary search returns a null set due to strict filtering.
+        if not docs:
+            logger.warning(f"No results for '{queries[i]}' with filter. Attempting unfiltered fallback...")
+            docs = vectordb.similarity_search(query=queries[i], k=3)
             
         all_retrieved_docs.extend(docs)
 
-    # 4. Metadata Cleaning Loop
-    # This removes the Markdown asterisks (**) and trims whitespace
-    for doc in all_retrieved_docs:
-        # Clean all keys that start with 'Header_'
-        for key, value in doc.metadata.items():
-            if key.startswith("Header_") and isinstance(value, str):
-                doc.metadata[key] = value.replace("**", "").strip()
-
-    # 5. Prepare Outputs
-    sources = [doc.metadata.get("source", "Unknown Source") for doc in all_retrieved_docs]
-    unique_sources = list(set(sources))
+    # Step 6: Context Synthesis for the LLM
+    # Merge all unique document chunks into a single string for the prompt context.
     combined_content = "\n\n".join([doc.page_content for doc in all_retrieved_docs])
 
     logger.info(f"Retrieval complete. Found {len(all_retrieved_docs)} relevant chunks.")
 
+    # Return the gathered intelligence to the global state
     return {
         "documents": all_retrieved_docs,
         "retriever_content": combined_content,
         "retrieval_success": len(all_retrieved_docs) > 0,
-        "sources": unique_sources
     }
