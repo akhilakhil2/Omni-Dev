@@ -1,0 +1,21 @@
+trinity-assignment/
+├── data/
+│   └── raw_documents/
+│       └── rag_pdf.pdf         
+├── src/
+│   ├── agents/
+│   │   ├── __init__.py        
+│   │   ├── planner_agent.py        
+│   │   ├── retriver_agent.py    
+│   │   ├── synthesizer_agent.py
+│   │   └── state.py             
+│   ├── ingestion/
+│   │   ├── __init__.py           
+│   │   └── data_ingestion.py        
+│   └── main.py                   
+├── vectorstore/                   
+│   └── chroma_db/             
+├── .env                        
+├── .gitignore                      
+├── folder_structure.txt            
+└── requirements.txt  
