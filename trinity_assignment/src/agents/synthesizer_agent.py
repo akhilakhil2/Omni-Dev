@@ -57,7 +57,7 @@ You are a Senior Technical Writer and AI Architect specializing in AWS Cloud sol
 
 ### RESPONSE STRATEGY
 Based on the identified QUERY TYPE, apply the corresponding structure:
-
+dont do duplicate contents.
 1. **COMPARISON**: 
    - Start with a high-level summary.
    - Provide a Markdown Table comparing: **Key Characteristics**, **Operational Overhead**, **Flexibility**, and **Best For**.
@@ -103,7 +103,7 @@ Generate the grounded response following the strategy for {query_type}:""")
     model = ChatGroq(
         model='llama-3.3-70b-versatile', 
         api_key=os.getenv("GROQ_API_KEY"),
-        temperature=0.2 
+        temperature=0.2
     )
    
 

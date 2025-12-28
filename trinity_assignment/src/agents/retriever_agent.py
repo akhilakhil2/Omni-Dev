@@ -56,13 +56,13 @@ def retriever_node(state: AgentState) -> Dict[str, Any]:
     # Step 5: Multi-Pass Retrieval Loop
     # We iterate through each optimized query to gather context for different sub-topics.
     for i in range(len(queries)):
-        print(f'Query: {queries[i]}, Section: {sections[i]}, Filter: {filters[i]}')
+        print(f'Query: {queries[i]}, Section: {sections[i]}, Filter: {filters[i].lower()}')
         
         # Primary Search: Targeted search using metadata constraints (e.g., Header_4)
         docs = vectordb.similarity_search(
             query=queries[i],
             k=3,
-            filter={sections[i]: filters[i]}
+            filter={sections[i]: filters[i].lower()}
         )
         
         # Secondary Search (Heuristic Fallback): 

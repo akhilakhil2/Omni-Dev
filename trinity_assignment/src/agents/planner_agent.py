@@ -31,7 +31,7 @@ class PlannerPlan(BaseModel):
         description="The metadata keys (Header_2, Header_3, Header_4) mapped to each optimized query."
     )
     metadata_filter: List[str] = Field(
-        description="The specific values within the target sections to filter the vector search. only use lowercase "
+        description="The specific values within the target sections to filter the vector search. use lowercase letters."
     )
     reasoning: str = Field(
         description="The architectural justification for the selected retrieval strategy."
@@ -75,12 +75,8 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
     You are a Senior AI Architect specializing in Retrieval Augmented Generation (RAG) systems. 
     Your goal is to orchestrate a retrieval strategy for the retrieval agent node from the AWS RAG Guide.
 
-    ### DOCUMENT HIERARCHY (Metadata Guide) 
-    The document metadata follows the format dict('Header_number':'value'). Here is the hierarchy:
-
     ### DOCUMENT HIERARCHY (Metadata Guide)
     The document metadata follows the format dict('Header_number':'value'). Here is the hierarchy:
-
     - Header_2: retrieval augmented generation options and architectures on aws
     - Header_2: generative ai options for querying custom documents
     - Header_2: fully managed retrieval augmented generation options on aws
@@ -126,7 +122,24 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
 
     3) **target_sections**: For each sub-query in `optimized_queries`, identify the relevant header section from the document hierarchy. Return the corresponding `Header_2`, `Header_3`, or `Header_4` sections for each sub-query. For example, for `['What is Amazon Kendra?', 'What is Pinecone?']`, return `['Header_4', 'Header_4']`. length of target_sections = length of optimized_queries
 
-    4) **metadata_filter**: For each sub-query in `optimized_queries` and its corresponding target section in `target_sections`, return the exact metadata values associated with that section. For instance, for the sub-query `['What is Amazon Kendra?', 'What is Pinecone?']` and target sections `['Header_4', 'Header_4']`, return `['amazon kendra', 'pinecone']` based on the document metadata. length of metadata_filters = length of target_sections .only use lowercase.
+    4) **metadata_filter**: For each sub-query in `optimized_queries` and its corresponding target section in `target_sections`, retrieve the associated metadata values for each section. The metadata values should be converted to lowercase.
+    - For each element in `optimized_queries`, match it with its corresponding section in `target_sections`.
+    - Extract the metadata related to the section in lowercase.
+    - The result will be a list where the length of the list equals the length of `target_sections`, with each entry corresponding to a metadata value from the corresponding section.
+     For a query like:
+    optimized_queries = ['What is Amazon Kendra?', 'What is Pinecone?']
+    target_sections = ['Header_4', 'Header_4']
+
+    If the document metadata for `Header_4` has values:
+    - "Amazon Kendra" for the first section,
+    - "Pinecone" for the second section.
+
+    The result should be:
+    metadata_filters = ['amazon kendra', 'pinecone']. the values should be exactly in  ### DOCUMENT HIERARCHY (Metadata Guide) and format dict('Header_number':'value').
+
+In summary:
+- `metadata_filters` should contain the lowercase metadata values associated with the respective target sections.
+- The length of `metadata_filters` should match the length of `target_sections`.
 
     5) **is_multi_pass**: If there is more than one sub-query in `optimized_queries`, set `is_multi_pass` to `True`. Otherwise, set it to `False`.
 
