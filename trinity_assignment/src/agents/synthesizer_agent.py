@@ -103,7 +103,7 @@ Generate the grounded response following the strategy for {query_type}:""")
     model = ChatGroq(
         model='llama-3.3-70b-versatile', 
         api_key=os.getenv("GROQ_API_KEY"),
-        temperature=0.2
+        temperature=0.7
     )
    
 
@@ -131,4 +131,5 @@ Generate the grounded response following the strategy for {query_type}:""")
         return {
             "generation": "An error occurred during response generation.",
             "confidence_score": 0.0
+
         }
