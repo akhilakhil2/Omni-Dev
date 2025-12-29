@@ -136,5 +136,4 @@ Generate the grounded response following the strategy for {query_type}:""")
         return {
             "generation": "An error occurred during response generation.",
             "confidence_score": 0.0
-
         }
