@@ -9,6 +9,7 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from .state import AgentState
 
+
 # Initialize logger for tracking the Planner's decision-making process
 logger = logging.getLogger("PlannerAgent")
 
@@ -27,11 +28,9 @@ class PlannerPlan(BaseModel):
     is_multi_pass: bool = Field(
         description="Flag indicating if multiple distinct retrieval steps are required."
     )
-    target_sections: List[str] = Field(
-        description="The metadata keys (Header_2, Header_3, Header_4) mapped to each optimized query."
-    )
-    metadata_filter: List[str] = Field(
-        description="The specific values within the target sections to filter the vector search. use lowercase letters."
+    
+    metadata_filter: List[dict] = Field(
+        description="A list of metadata filters. Each filter is a dictionary where the key is the header level (e.g., 'Header_4') and the value is the specific metadata string."
     )
     reasoning: str = Field(
         description="The architectural justification for the selected retrieval strategy."
@@ -68,6 +67,8 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
     model = ChatGroq(model='llama-3.3-70b-versatile', api_key=groq_key, temperature=0.1)
     
     structured_llm = model.with_structured_output(PlannerPlan)
+    
+    
 
     # Construct the System Prompt with the Document Hierarchy (Grounding Logic)
     prompt_template = ChatPromptTemplate.from_messages([
@@ -77,41 +78,8 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
 
     ### DOCUMENT HIERARCHY (Metadata Guide)
     The document metadata follows the format dict('Header_number':'value'). Here is the hierarchy:
-    - Header_2: retrieval augmented generation options and architectures on aws
-    - Header_2: generative ai options for querying custom documents
-    - Header_2: fully managed retrieval augmented generation options on aws
-    - Header_2: custom retrieval augmented generation architectures on aws
-    - Header_2: choosing a retrieval augmented generation option on aws
-    - Header_2: conclusion
-    - Header_2: document history
-    - Header_2: aws prescriptive guidance glossary
-    - Header_3: intended audience
-    - Header_3: objectives
-    - Header_3: understanding retrieval augmented generation
-    - Header_3: comparing retrieval augmented generation and fine-tuning
-    - Header_3: use cases for retrieval augmented generation
-    - Header_3: knowledge bases for amazon bedrock
-    - Header_3: amazon q business
-    - Header_3: amazon sagemaker ai canvas
-    - Header_3: retrievers for rag workflows
-    - Header_3: generators for rag workflows
-    - Header_4: aws prescriptive guidance: retrieval augmented generation options and architectures on aws
-    - Header_4: components of production-level rag systems
-    - Header_4: data sources for knowledge bases
-    - Header_4: vector databases for knowledge bases
-    - Header_4: key features
-    - Header_4: end-user customization
-    - Header_4: amazon kendra
-    - Header_4: amazon opensearch service
-    - Header_4: amazon aurora postgresql and pgvector
-    - Header_4: amazon neptune analytics
-    - Header_4: amazon memorydb
-    - Header_4: amazon documentdb
-    - Header_4: pinecone
-    - Header_4: mongodb atlas
-    - Header_4: weaviate
-    - Header_4: amazon bedrock
-    - Header_4: sageMaker ai jumpstart
+    "Header_4": ["aws prescriptive guidance: retrieval augmented generation options and architectures on aws","components of production-level rag systems","data sources for knowledge bases","vector databases for knowledge bases","key_features","end-user customization","amazon kendra","amazon opensearch service","amazon aurora postgresql and pgvector","amazon neptune analytics","amazon memorydb","amazon documentdb","pinecone","mongodb atlas","weaviate","amazon bedrock","sageMaker ai jumpstart"]
+     
     ### PLANNER PLAN
     The PlannerPlan should be generated based on the following fields:
     
@@ -120,53 +88,20 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
 
     2) **optimized_queries**: Break down the user query into more specific sub-queries. For example, if the query is "What is Amazon Kendra and what is Pinecone?", return the optimized queries as `['What is Amazon Kendra?', 'What is Pinecone?']`.
 
-    3) **target_sections**: For each sub-query in `optimized_queries`, identify the relevant header section from the document hierarchy. Return the corresponding `Header_2`, `Header_3`, or `Header_4` sections for each sub-query. For example, for `['What is Amazon Kendra?', 'What is Pinecone?']`, return `['Header_4', 'Header_4']`. length of target_sections = length of optimized_queries
+    3) **metadata_filter**: For each sub-query in `optimized_queries`, you must generate a filter dictionary.
+- The format must be a List of dictionaries: `[{{"Header_4": "value1"}}, {{"Header_4": "value2"}}]`.
+- Use the DOCUMENT HIERARCHY (Metadata Guide) to find the exact string for "Header_4".
+- All values must be in lowercase.
+- The number of dictionaries in the list MUST match the number of `optimized_queries`.
 
-    4) **metadata_filter**: For each sub-query in `optimized_queries` and its corresponding target section in `target_sections`, retrieve the associated metadata values for each section. The metadata values should be converted to lowercase.
-    - For each element in `optimized_queries`, match it with its corresponding section in `target_sections`.
-    - Extract the metadata related to the section in lowercase.
-    - The result will be a list where the length of the list equals the length of `target_sections`, with each entry corresponding to a metadata value from the corresponding section.
-     For a query like:
-    optimized_queries = ['What is Amazon Kendra?', 'What is Pinecone?']
-    target_sections = ['Header_4', 'Header_4']
+### EXAMPLE OUTPUT FORMAT
+If `optimized_queries` is ["What is Amazon Kendra?", "Tell me about Pinecone"]:
+`metadata_filter` = [{{"Header_4": "amazon kendra"}}, {{"Header_4": "pinecone"}}]  
 
-    If the document metadata for `Header_4` has values:
-    - "Amazon Kendra" for the first section,
-    - "Pinecone" for the second section.
+    4) **is_multi_pass**: If there is more than one sub-query in `optimized_queries`, set `is_multi_pass` to `True`. Otherwise, set it to `False`.
 
-    The result should be:
-    metadata_filters = ['amazon kendra', 'pinecone']. the values should be exactly in  ### DOCUMENT HIERARCHY (Metadata Guide) and format dict('Header_number':'value').
+    5) **reasoning**: Explain the rationale behind the choices made for each field (`query_type`, `optimized_queries`, `target_sections`, `metadata_filter`, `is_multi_pass`). Provide an explanation for why each value was selected based on the user query.
 
-In summary:
-- `metadata_filters` should contain the lowercase metadata values associated with the respective target sections.
-- The length of `metadata_filters` should match the length of `target_sections`.
-
-    5) **is_multi_pass**: If there is more than one sub-query in `optimized_queries`, set `is_multi_pass` to `True`. Otherwise, set it to `False`.
-
-    6) **reasoning**: Explain the rationale behind the choices made for each field (`query_type`, `optimized_queries`, `target_sections`, `metadata_filter`, `is_multi_pass`). Provide an explanation for why each value was selected based on the user query.
-
-    ### EXAMPLES
-    - **Example 1:**
-        User Query: "What is Amazon Kendra and what is Pinecone?"
-        Feedback: None
-        PlannerPlan:
-        - `query_type`: "comparison"
-        - `optimized_queries`: ["What is Amazon Kendra?", "What is Pinecone?"]
-        - `target_sections`: ["Header_4", "Header_4"]
-        - `metadata_filter`: ["amazon kendra", "pinecone"]
-        - `is_multi_pass`: True
-        - `reasoning`: "The query asks for a comparison between Amazon Kendra and Pinecone, so it was classified as a 'comparison' query. Each query was broken down into specific topics, and both topics belong to 'Header_4', which refers to technical information about these tools. As there are two sub-queries, `is_multi_pass` is set to True."
-
-    - **Example 2:**
-        User Query: "What is Amazon Kendra?"
-        Feedback: None
-        PlannerPlan:
-        - `query_type`: "definition"
-        - `optimized_queries`: ["What is Amazon Kendra?"]
-        - `target_sections`: ["Header_4"]
-        - `metadata_filter`: ["amazon kendra"]
-        - `is_multi_pass`: False
-        - `reasoning`: "The query asks for a definition of Amazon Kendra, so it was classified as a 'definition' query. The query is straightforward and only requires one search term, which corresponds to 'Header_4' where Amazon Kendra is discussed. Since only one sub-query exists, `is_multi_pass` is set to False."
 
     ### NOTES:
     - DO NOT HALLUCINATE information. Refer only to the provided document metadata and user query.

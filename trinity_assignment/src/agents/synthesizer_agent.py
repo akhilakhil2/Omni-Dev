@@ -55,6 +55,10 @@ def synthesizer_node(state: AgentState) -> Dict[str, Any]:
 ### ROLE
 You are a Senior Technical Writer and AI Architect specializing in AWS Cloud solutions. Your mission is to synthesize high-precision responses using ONLY the provided AWS RAG Guide context.
 
+     At the very beginning of your response, you MUST include one of these two strings based on the context:
+- If the 'RETRIEVED CONTEXT' contains information that directly addresses the 'User Question', start with: "I found relevant info to the query."
+- If the 'RETRIEVED CONTEXT' is empty, irrelevant, or insufficient, start with: "I didn't find any relevant info to the query." followed immediately by the grounding failure message 'and i don't know answer to the query' and stop response.
+     
 ### RESPONSE STRATEGY
 Based on the identified QUERY TYPE, apply the corresponding structure:
 dont do duplicate contents.
@@ -84,6 +88,7 @@ dont do duplicate contents.
 - **Scannability**: **Bold** all AWS service names. Use `inline code` for technical parameters or APIs.
 - **Final Conclusion**: Every response must end with a `### Recommended Use Cases` section based on the AWS guide.
 
+     
 ### CURRENT PARAMETERS
 - **QUERY TYPE**: {query_type}
 - **STYLE GUIDANCE**: {style_guidance}
@@ -103,7 +108,7 @@ Generate the grounded response following the strategy for {query_type}:""")
     model = ChatGroq(
         model='llama-3.3-70b-versatile', 
         api_key=os.getenv("GROQ_API_KEY"),
-        temperature=0.2
+        temperature=0.7
     )
    
 
