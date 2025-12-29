@@ -78,8 +78,11 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
 
     ### DOCUMENT HIERARCHY (Metadata Guide)
     The document metadata follows the format dict('Header_number':'value'). Here is the hierarchy:
-    "Header_4": ["aws prescriptive guidance: retrieval augmented generation options and architectures on aws","components of production-level rag systems","data sources for knowledge bases","vector databases for knowledge bases","key_features","end-user customization","amazon kendra","amazon opensearch service","amazon aurora postgresql and pgvector","amazon neptune analytics","amazon memorydb","amazon documentdb","pinecone","mongodb atlas","weaviate","amazon bedrock","sageMaker ai jumpstart"]
-     
+    "Header_2":['generative ai options for querying custom documents', 'fully managed retrieval augmented generation options on aws', 'custom retrieval augmented generation architectures on aws', 'choosing a retrieval augmented generation option on aws', 'conclusion', 'document history'],
+    "Header_3":['intended audience', 'objectives', 'understanding retrieval augmented generation', 'comparing retrieval augmented generation and fine-tuning', 'use cases for retrieval augmented generation', 'knowledge bases for amazon bedrock', 'amazon q business', 'amazon sagemaker ai canvas', 'retrievers for rag workflows', 'generators for rag workflows']
+    "Header_4": ["components of production-level rag systems","data sources for knowledge bases","vector databases for knowledge bases","key_features","end-user customization","amazon kendra","amazon opensearch service","amazon aurora postgresql and pgvector","amazon neptune analytics","amazon memorydb","amazon documentdb","pinecone","mongodb atlas","weaviate","amazon bedrock","sageMaker ai jumpstart"]
+      
+
     ### PLANNER PLAN
     The PlannerPlan should be generated based on the following fields:
     
@@ -89,14 +92,15 @@ def planner_node(state: AgentState) -> Dict[str, Any]:
     2) **optimized_queries**: Break down the user query into more specific sub-queries. For example, if the query is "What is Amazon Kendra and what is Pinecone?", return the optimized queries as `['What is Amazon Kendra?', 'What is Pinecone?']`.
 
     3) **metadata_filter**: For each sub-query in `optimized_queries`, you must generate a filter dictionary.
-- The format must be a List of dictionaries: `[{{"Header_4": "value1"}}, {{"Header_4": "value2"}}]`.
-- Use the DOCUMENT HIERARCHY (Metadata Guide) to find the exact string for "Header_4".
-- All values must be in lowercase.
-- The number of dictionaries in the list MUST match the number of `optimized_queries`.
+    - The format must be a List of dictionaries: `[{{"Header_2": "value1"}}, {{"Header_3": "value2"}}]`.
+    - Use the DOCUMENT HIERARCHY (Metadata Guide) to find the exact string for "Header_2","Header_3","Header_4".
+    - return only excact values matched to query in metadata  
+    - All values must be in lowercase.
+    - The number of dictionaries in the list MUST match the number of `optimized_queries`.
 
-### EXAMPLE OUTPUT FORMAT
-If `optimized_queries` is ["What is Amazon Kendra?", "Tell me about Pinecone"]:
-`metadata_filter` = [{{"Header_4": "amazon kendra"}}, {{"Header_4": "pinecone"}}]  
+    ### EXAMPLE OUTPUT FORMAT
+    If `optimized_queries` is ["What is Kendra?", "Tell me about Pinecone"]:
+    `metadata_filter` = [{{"Header_4": "amazon kendra"}}, {{"Header_4": "pinecone"}}]  
 
     4) **is_multi_pass**: If there is more than one sub-query in `optimized_queries`, set `is_multi_pass` to `True`. Otherwise, set it to `False`.
 
